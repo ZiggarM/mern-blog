@@ -1,6 +1,6 @@
-import User from "../models/User.model.js";
+import User from "../models/user.model.js";
 import bcryptjs from "bcryptjs";
-import { erorrHandler } from "../utils/error.js";
+import { errorHandler } from "../utils/error.js";
 import jwt from "jsonwebtoken";
 
 export const signup = async (req, res, next) => {
@@ -14,7 +14,7 @@ export const signup = async (req, res, next) => {
     email === "" ||
     password === ""
   ) {
-    next(erorrHandler(400, "All Fields Are Required"));
+    next(errorHandler(400, "All fields are required"));
   }
 
   const hashedPassword = bcryptjs.hashSync(password, 10);
@@ -27,7 +27,7 @@ export const signup = async (req, res, next) => {
 
   try {
     await newUser.save();
-    res.json({ message: "Signup successful" });
+    res.json("Signup successful");
   } catch (error) {
     next(error);
   }
@@ -37,22 +37,20 @@ export const signin = async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password || email === "" || password === "") {
-    next(erorrHandler(400, "All fields are required"));
+    next(errorHandler(400, "All fields are required"));
   }
+
   try {
     const validUser = await User.findOne({ email });
     if (!validUser) {
-      return next(erorrHandler(404, "User not Found"));
+      return next(errorHandler(404, "User not found"));
     }
     const validPassword = bcryptjs.compareSync(password, validUser.password);
     if (!validPassword) {
-      return next(erorrHandler(400, "Invalid password"));
+      return next(errorHandler(400, "Invalid password"));
     }
-    const token = jwt.sign(
-      { id: validUser._id, username: validUser.username },
-      process.env.JWT_SECRET
-    );
-    // Separate password for the rest so we dont send it back
+    const token = jwt.sign({ id: validUser._id }, process.env.JWT_SECRET);
+
     const { password: pass, ...rest } = validUser._doc;
 
     res
@@ -67,7 +65,7 @@ export const signin = async (req, res, next) => {
 };
 
 export const google = async (req, res, next) => {
-  const { email, name, googlePhotoURL } = req.body;
+  const { email, name, googlePhotoUrl } = req.body;
   try {
     const user = await User.findOne({ email });
     if (user) {
@@ -80,8 +78,6 @@ export const google = async (req, res, next) => {
         })
         .json(rest);
     } else {
-      // Beacause you create a user with email we generate a random pass
-      // toString(36) generates the first 10 numbers 0-9 and the alphabet -8 cuts the 0.
       const generatedPassword =
         Math.random().toString(36).slice(-8) +
         Math.random().toString(36).slice(-8);
@@ -92,7 +88,7 @@ export const google = async (req, res, next) => {
           Math.random().toString(9).slice(-4),
         email,
         password: hashedPassword,
-        profilePicture: googlePhotoURL,
+        profilePicture: googlePhotoUrl,
       });
       await newUser.save();
       const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET);
