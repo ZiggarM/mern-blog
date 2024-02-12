@@ -9,3 +9,26 @@ body {
 .ql-editor {
   font-size: 1.05rem;
 }
+
+.chat-area {
+  height: 95vh;
+  overflow-y: auto;
+}
+
+.text-right {
+  max-width: 70%;
+}
+.text-left {
+  max-width: 70%;
+}
+
+.chat-form {
+  position: absolute;
+  bottom: 4.5rem;
+  width: 70%;
+  right: 4rem;
+}
+
+.last-message {
+  margin-bottom: 5rem;
+}

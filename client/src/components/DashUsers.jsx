@@ -27,9 +27,7 @@ export default function DashUsers() {
         console.log(error.message);
       }
     }
-    if(currentUser.isAdmin){
       fetchUsers()
-    }
   }, [currentUser._id])
 
   const handleShowMore = async () => {
@@ -68,7 +66,7 @@ export default function DashUsers() {
   return (
     <div className='table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500'>
       {/* Modify later, right now only admin can see users */}
-      {currentUser.isAdmin && users.length > 0 ? (
+      
         <>
         <Table hoverable className='shadow-md'>
           <Table.Head>
@@ -87,12 +85,16 @@ export default function DashUsers() {
             <Table.HeadCell>
               Admin
             </Table.HeadCell>
+            {currentUser.isAdmin &&(
             <Table.HeadCell>
               <span>Delete</span>
             </Table.HeadCell>
+            )}
+            {currentUser.isAdmin &&(
             <Table.HeadCell>
               <span>Edit</span>
             </Table.HeadCell>
+             )}
             <Table.HeadCell>
               <span>Message</span>
             </Table.HeadCell>
@@ -115,6 +117,7 @@ export default function DashUsers() {
                 <Table.Cell>
                   {user.isAdmin ? (<FaCheck className="text-green-500 mx-auto"/>) : (<FaTimes className="text-red-500 mx-auto"/>)}
                 </Table.Cell>
+                {currentUser.isAdmin &&(
                 <Table.Cell>
                   <span onClick={() => {
                     setShowModal(true)
@@ -123,6 +126,8 @@ export default function DashUsers() {
                     Delete
                   </span>
                 </Table.Cell>
+                )}
+                {currentUser.isAdmin &&(
                 <Table.Cell>
                   <Link className='text-teal-500 hover:underline' to={`/update-user/${user._id}`}>
                     <span>
@@ -130,9 +135,10 @@ export default function DashUsers() {
                     </span>
                   </Link>
                 </Table.Cell>
+                )}
                 {/* Modify it later */}
                 <Table.Cell>
-                  <Link className='text-teal-500 hover:underline' to={`/update-user/${user._id}`}>
+                  <Link className='text-teal-500 hover:underline' to={`/chat/${user._id}?username=${user.username}`}>
                     <span>
                       Message
                     </span>
@@ -150,9 +156,6 @@ export default function DashUsers() {
           )
         }
         </>
-      ) : (
-        <p>You have no users yet!</p>
-      )}
        <Modal show={showModal} onClose={() => setShowModal(false)} popup size='md'>
         <Modal.Header/>
         <Modal.Body>
