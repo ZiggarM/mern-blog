@@ -1,142 +1,327 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
+import {useSelector} from 'react-redux'
+import { Button, Modal, Table } from 'flowbite-react';
+import { Link } from 'react-router-dom';
+import { HiOutlineExclamationCircle } from 'react-icons/hi'
+import { FaCheck, FaTimes } from 'react-icons/fa'
 
-export default function Conversations() {
-
-    const [newMessageText ,setNewMessageText] = useState('')
 
 
+export default function ChatPage() {
+  const {currentUser} = useSelector(state => state.user)
+  const [usersMessages, setUsersMessages] = useState([])
+  const [usersTalkedWith, setUsersTalkedWith] = useState([])
+  const [newMessageText ,setNewMessageText] = useState('')
+  const chatAreaRef = useRef(null); // Ref for the chat area element
+  const [users, setUsers] = useState([])
+  const [showMore, setShowMore] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [userIdToDelete, setUserIdToDelete] = useState('')
 
-    const sendMessage = async (e) => {
-    e.preventDefault();
+//   ------------------------------------------------------
+useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`/api/user/getusers`)
+        const data = await res.json()
+        if(res.ok){
+          setUsers(data.users)
+          if(data.users.length < 9) {
+            setShowMore(false)
+          }
+        }
+      } catch (error) {
+        console.log(error.message);
+      }
+    }
+      fetchUsers()
+  }, [currentUser._id])
 
+  const handleShowMore = async () => {
+    const startIndex = users.length
     try {
-        const messageData = {
-            senderId: 'yourSenderId', // Replace 'yourSenderId' with the actual sender ID
-            receiverId: 'yourReceiverId', // Replace 'yourReceiverId' with the actual receiver ID
-            content: 'yourMessageContent' // Replace 'yourMessageContent' with the actual message content
+      const res = await fetch(`/api/user/getusers?startIndex=${startIndex}`)
+      const data = await res.json()
+      if(res.ok) {
+        setUsers((prev) => [...prev, ...data.users])
+        if(data.users.length < 9) {
+          setShowMore(false)
+        }
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    try {
+        const res = await fetch(`/api/user/delete/${userIdToDelete}`, {
+            method: 'DELETE',
+        })
+        const data = await res.json();
+        if(res.ok){
+            setUsers((prev) => prev.filter((user) => user._id !== userIdToDelete))
+            setShowModal(false)
+        } else {
+            console.log(data.message);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+  }
+//   ----------------------------------------------------------
+
+  const url = new URL(window.location.href);
+  const receiverId = url.pathname.split("/").pop(); // Get the last segment of the URL path
+  const params = new URLSearchParams(location.search);
+  const otherUsername = params.get('username');
+
+  useEffect(() => {
+    // Scroll to the bottom of the chat area every time usersMessages changes
+    if (chatAreaRef.current) {
+      chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
+    }
+    }, [usersMessages]);
+ 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`/api/message/getmessagesbetweenusers/${receiverId}/${currentUser._id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      const data = await res.json()
+      if(res.ok){
+        setUsersMessages(data)
+      }
+      } catch (error) {
+        console.log(error.message);
+      }
+    }
+    fetchUsers();
+  }, [newMessageText]);
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const res = await fetch(`/api/conversation/getconversation/${currentUser._id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setUsersTalkedWith(data);
+        }
+      } catch (error) {
+        console.log(error.message);
+      }
+    };
+    fetchConversations(); 
+  }, [usersMessages]);
+
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const messageData = {
+        senderId: currentUser._id,
+        receiverId: receiverId,
+        content: newMessageText
         };
 
-        const res = await fetch('/api/message/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(messageData) // Convert messageData to JSON string before sending
+      // Create a new message
+      const messageResponse = await fetch('/api/message/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageData)
+      });
+        
+      setNewMessageText('');
+      const messageResult = await messageResponse.json();
+
+      const conversationData = {
+        user1: receiverId,
+        user2: currentUser._id,
+        lastMessage: {
+          sender: currentUser.username,
+          content: newMessageText
+          }
+      };
+
+      // Check if the conversation exists
+      const conversationCheckResponse = await fetch('/api/conversation/checkConversationExists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(conversationData)
+      });
+
+      const conversationExists = await conversationCheckResponse.json();
+
+      if (conversationExists) {
+        // Conversation exists, update the lastMessage
+        const updateConversationResponse = await fetch('/api/conversation/updateconversation', {
+          method: 'PUT',
+          headers: {
+          'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(conversationData)
+          });
+
+        const updatedConversation = await updateConversationResponse.json();
+        console.log('Updated Conversation:', updatedConversation);
+      } else {
+        // Conversation does not exist, create a new one
+        const createConversationResponse = await fetch('/api/conversation/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(conversationData)
         });
 
-        const data = await res.json();
-        console.log(data); // Log the response data to the console
+        const conversationResult = await createConversationResponse.json();
+        console.log('New Conversation Created:', conversationResult);
+      }
     } catch (error) {
-        console.error(error); // Log any errors to the console
+        console.error(error);
     }
 };
 
   return (
-     <div className="flex h-screen">
-            <div className="bg-white w-1/5">
-                {/* {Object.keys(onlinePeopleExcludingOurUser).map(userId => (
-                    <div key={userId} onClick={() => setSelectedUserId(userId)}
-                     className={"border-b border-gray-100 flex items-center gap-2 cursor-pointer " + (userId === selectedUserId ? 'bg-blue-50' : '')}>
-                        {userId === selectedUserId && (
-                            <div className="w-1 bg-blue-500 h-12 rounded-r-md"></div>
-                        )}
-                        <div className="flex gap-2 py-2 pl-4 items-center">
-                            <Avatar username={onlinePeople[userId]} userId={userId} />
-                            <span className="text-gray-800">{onlinePeople[userId]}</span>
-                        </div>
-                    </div>
-                ))} */}
-            </div>
-            <div className=" flex flex-col bg-blue-50 w-4/5 p-2">
-                <div className="flex-grow">
-                    {/* {!selectedUserId && (
-                        <div className="flex h-full items-center justify-center">
-                            <div className="text-gray-400">&larr; Select a person from the sidebar</div>
-                        </div>
-                    )}
-                    {!!selectedUserId && (
-                        <div className="relative h-full">
-                            <div className="overflow-y-scroll absolute top-0 left-0 right-0 bottom-2">
-                                {messagesWithoutDupes.map(message => (
-                                    <div className={(message.sender === id ? 'text-right' : 'text-left')}>
-                                        <div className={"text-left inline-block p-2 my-2 rounded-md text-sm " +(message.sender === id ? 'bg-blue-500 text-white' : 'bg-white text-gray-500')}>
-                                            sender:{message.sender}<br />
-                                            my id {id} <br />
-                                            {message.text}
-                                        </div>
-                                    </div>
-                                ))}
-                                <div ref={divUnderMessages}></div>
-                            </div>
-                        </div>
-                    )} */}
+    <div className="flex h-screen relative">
+      <div className="bg-gray-500 w-1/5 sidebar">
+        {usersTalkedWith.map(user => {
+          const [user1] = user.user1;
+          const [user2] = user.user2;
+            return (
+              <div key={user._id} className="bg-white mb-2 text-black">
+                <a href={user1.username === currentUser.username ? `/chat/${user2._id}?username=${user2.username}` : `/chat/${user1._id}?username=${user1.username}`}>
+                  <h4>{user1.username === currentUser.username ? user2.username : user1.username}</h4>
+                </a>
+                <p>{user.lastMessage.content}</p>
+              </div>
+            );
+          })
+        }
+      </div>
+      <div className='table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300 dark:scrollbar-track-slate-700 dark:scrollbar-thumb-slate-500'>
+      {/* Modify later, right now only admin can see users */}
+      
+        <>
+        <h1 className='text-center mb-4 font-bold'>Pick someone to speak with</h1>
+        <Table hoverable className='shadow-md'>
+          <Table.Head>
+            <Table.HeadCell>
+              Date Created
+            </Table.HeadCell>
+            <Table.HeadCell>
+              User image
+            </Table.HeadCell>
+            <Table.HeadCell>
+              Username
+            </Table.HeadCell>
+            <Table.HeadCell>
+              Email
+            </Table.HeadCell>
+            <Table.HeadCell>
+              Admin
+            </Table.HeadCell>
+            {currentUser.isAdmin &&(
+            <Table.HeadCell>
+              <span>Delete</span>
+            </Table.HeadCell>
+            )}
+            {currentUser.isAdmin &&(
+            <Table.HeadCell>
+              <span>Edit</span>
+            </Table.HeadCell>
+             )}
+            <Table.HeadCell>
+              <span>Message</span>
+            </Table.HeadCell>
+          </Table.Head>
+          {users.map((user) => (
+            <Table.Body className='divide-y' key={user._id}>
+              <Table.Row className='bg-white dark:border-gray-700 dark:bg-gray-800'>
+                <Table.Cell>
+                  {new Date(user.updatedAt).toLocaleDateString()}
+                </Table.Cell>
+                <Table.Cell>
+                    <img src={user.profilePicture} alt={user.username} className='w-10 h-10 object-cover bg-gray-500 rounded-full' />
+                </Table.Cell>
+                <Table.Cell>
+                    {user.username}
+                </Table.Cell>
+                <Table.Cell>
+                  {user.email}
+                </Table.Cell>
+                <Table.Cell>
+                  {user.isAdmin ? (<FaCheck className="text-green-500 mx-auto"/>) : (<FaTimes className="text-red-500 mx-auto"/>)}
+                </Table.Cell>
+                {currentUser.isAdmin &&(
+                <Table.Cell>
+                  <span onClick={() => {
+                    setShowModal(true)
+                    setUserIdToDelete(user._id)
+                  }} className='font-medium text-red-500 hover:underline cursor-pointer'>
+                    Delete
+                  </span>
+                </Table.Cell>
+                )}
+                {currentUser.isAdmin &&(
+                <Table.Cell>
+                  <Link className='text-teal-500 hover:underline' to={`/update-user/${user._id}`}>
+                    <span>
+                      Edit
+                    </span>
+                  </Link>
+                </Table.Cell>
+                )}
+                {/* Modify it later */}
+                <Table.Cell>
+                  <Link className='text-teal-500 hover:underline' to={`/chat/${user._id}?username=${user.username}`}>
+                    <span>
+                      Message
+                    </span>
+                  </Link>
+                </Table.Cell>
+              </Table.Row>
+            </Table.Body>
+          ))}
+        </Table>
+        {
+          showMore && (
+            <button onClick={handleShowMore} className='w-full text-teal-500 self-center text-sm py-7'>
+              Show More
+            </button>
+          )
+        }
+        </>
+       <Modal show={showModal} onClose={() => setShowModal(false)} popup size='md'>
+        <Modal.Header/>
+        <Modal.Body>
+            <div className="text-center">
+                <HiOutlineExclamationCircle className='h-14 w-14 text-gray-400 dark:text-gray-200 mb-4 mx-auto'/>
+                <h3 className='mb-5 text-lg text-gray-500 dark:text-gray-400'>Are you sure you want to delete this user?</h3>
+                <div className="flex justify-center gap-4">
+                    <Button color='failure' onClick={handleDeleteUser}>
+                        Yes, I am sure
+                    </Button>
+                    <Button color="gray" onClick={() => setShowModal(false)}>No, cancel</Button>
                 </div>
-                {/* !! converts it to a boolean */}
-                <form className="flex gap-2" onSubmit={sendMessage}>
-                    <input type="text" 
-                    value={newMessageText}
-                    onChange={e => setNewMessageText(e.target.value)}
-                    placeholder="Type your message here" 
-                    className="bg-white flex-grow border p-2 rounded-sm" />
-                    <button type="submit" className="bg-blue-500 p-2 text-white rounded-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                        </svg>
-                    </button>
-                </form>
-
-                
-                {/* {!!selectedUserId && (
-                <form className="flex gap-2" onSubmit={sendMessage}>
-                    <input type="text" 
-                    value={newMessageText}
-                    onChange={ev => setNewMessageText(ev.target.value)}
-                    placeholder="Type your message here" 
-                    className="bg-white flex-grow border p-2 rounded-sm" />
-                    <button type="submit" className="bg-blue-500 p-2 text-white rounded-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                        </svg>
-                    </button>
-                </form>
-                )} */}
             </div>
-        </div>
+        </Modal.Body>
+      </Modal>
+    </div>
+    </div>
   )
 }
-
-
-// import { useEffect, useState } from "react"
-// import { useLocation } from "react-router-dom"
-// import DashSideBar from '../components/DashSideBar'
-// import DashProfile from '../components/DashProfile'
-// import DashPosts from "../components/DashPosts"
-// import DashUsers from "../components/DashUsers"
-
-// export default function Dashboard() {
-//   const location = useLocation()
-//   const [tab, setTab] = useState('')
-//   useEffect(() => {
-//     const urlParams = new URLSearchParams(location.search)
-//     const tabFormUrl = urlParams.get('tab')
-//     if(tabFormUrl) {
-//       setTab(tabFormUrl)
-//     }
-//   }, [location.search])
-
-//   return (
-//     <div className="min-h-screen flex flex-col md:flex-row">
-
-//       <div className="md:w-56">
-//       {/* SideBar */}
-//       <DashSideBar />
-//       </div>
-//       {/* Profile */}
-//       {tab === 'profile' && <DashProfile/>}
-//       {/* Posts */}
-//       {tab === 'posts' && <DashPosts/>}
-//       {/* Users */}
-//       {tab === 'users' && <DashUsers/>}
-//     </div>
-//   )
-// }

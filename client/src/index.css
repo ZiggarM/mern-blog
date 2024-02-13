@@ -32,3 +32,6 @@ body {
 .last-message {
   margin-bottom: 5rem;
 }
+.sidebar {
+  height: 95vh;
+}

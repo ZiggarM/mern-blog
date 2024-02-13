@@ -52,23 +52,22 @@ export const getMessagesBetweenUsers = async (req, res, next) => {
 };
 
 export const deleteMessage = async (req, res, next) => {
-  const messageId = req.params.messageId;
-
   try {
-    // Find the message by its ID
-    const messageToDelete = await Message.findById(messageId);
+    // Find the message by ID
+    const message = await Message.findById(req.params.messageId);
 
-    if (!messageToDelete) {
-      return next(errorHandler(404, "Message not found"));
+    // Check if the message is found
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
     }
 
-    // Update the message's isDeleted field to true
-    messageToDelete.isDeleted = true;
+    // Update the isDeleted field to true
+    message.isDeleted = true;
 
     // Save the updated message
-    const deletedMessage = await messageToDelete.save();
+    await message.save();
 
-    res.status(200).json(deletedMessage);
+    res.status(200).json({ message: "Message has been deleted" });
   } catch (error) {
     next(error);
   }

@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import {useSelector} from 'react-redux'
+import { Button, Modal } from 'flowbite-react';
+import { HiOutlineExclamationCircle } from 'react-icons/hi'
 
 
 
@@ -8,9 +10,10 @@ export default function ChatPage() {
   const [usersMessages, setUsersMessages] = useState([])
   const [usersTalkedWith, setUsersTalkedWith] = useState([])
   const [newMessageText ,setNewMessageText] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [messageToDelete, setMessageToDelete] = useState('')
+  const [messages, setMessages] = useState([])
   const chatAreaRef = useRef(null); // Ref for the chat area element
-
-
 
 
   const url = new URL(window.location.href);
@@ -19,12 +22,13 @@ export default function ChatPage() {
   const otherUsername = params.get('username');
 
   useEffect(() => {
-        // Scroll to the bottom of the chat area every time usersMessages changes
-        if (chatAreaRef.current) {
-            chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
-        }
+    // Scroll to the bottom of the chat area every time usersMessages changes
+    if (chatAreaRef.current) {
+      chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
+    }
     }, [usersMessages]);
  
+    console.log(messageToDelete);
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -33,111 +37,127 @@ export default function ChatPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        })
-        const data = await res.json()
-        if(res.ok){
-          setUsersMessages(data)
-        }
+      })
+      const data = await res.json()
+      if(res.ok){
+        setUsersMessages(data)
+      }
       } catch (error) {
         console.log(error.message);
       }
     }
     fetchUsers();
+  }, [newMessageText]);
 
-}, [newMessageText]);
-useEffect(() => {
-  const fetchConversations = async () => {
-    try {
-      const res = await fetch(`/api/conversation/getconversation/${currentUser._id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setUsersTalkedWith(data);
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const res = await fetch(`/api/conversation/getconversation/${currentUser._id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setUsersTalkedWith(data);
+        }
+      } catch (error) {
+        console.log(error.message);
       }
-    } catch (error) {
-      console.log(error.message);
-    }
-  };
-  fetchConversations(); 
-}, [usersMessages]);
+    };
+    fetchConversations(); 
+  }, [usersMessages]);
 
-  console.log(usersTalkedWith);
 
-   const sendMessage = async (e) => {
+  const sendMessage = async (e) => {
     e.preventDefault();
     
     try {
-        const messageData = {
-            senderId: currentUser._id,
-            receiverId: receiverId,
-            content: newMessageText
+      const messageData = {
+        senderId: currentUser._id,
+        receiverId: receiverId,
+        content: newMessageText
         };
 
-        // Create a new message
-        const messageResponse = await fetch('/api/message/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(messageData)
-        });
+      // Create a new message
+      const messageResponse = await fetch('/api/message/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageData)
+      });
         
-        setNewMessageText('');
-        const messageResult = await messageResponse.json();
+      setNewMessageText('');
+      const messageResult = await messageResponse.json();
 
-        const conversationData = {
-            user1: receiverId,
-            user2: currentUser._id,
-            lastMessage: {
-                sender: currentUser.username,
-                content: newMessageText
-            }
-        };
+      const conversationData = {
+        user1: receiverId,
+        user2: currentUser._id,
+        lastMessage: {
+          sender: currentUser.username,
+          content: newMessageText
+          }
+      };
 
-        // Check if the conversation exists
-        const conversationCheckResponse = await fetch('/api/conversation/checkConversationExists', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(conversationData)
+      // Check if the conversation exists
+      const conversationCheckResponse = await fetch('/api/conversation/checkConversationExists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(conversationData)
+      });
+
+      const conversationExists = await conversationCheckResponse.json();
+
+      if (conversationExists) {
+        // Conversation exists, update the lastMessage
+        const updateConversationResponse = await fetch('/api/conversation/updateconversation', {
+          method: 'PUT',
+          headers: {
+          'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(conversationData)
+          });
+
+        const updatedConversation = await updateConversationResponse.json();
+        console.log('Updated Conversation:', updatedConversation);
+      } else {
+        // Conversation does not exist, create a new one
+        const createConversationResponse = await fetch('/api/conversation/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(conversationData)
         });
 
-        const conversationExists = await conversationCheckResponse.json();
-
-        if (conversationExists) {
-            // Conversation exists, update the lastMessage
-            const updateConversationResponse = await fetch('/api/conversation/updateconversation', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(conversationData)
-            });
-
-            const updatedConversation = await updateConversationResponse.json();
-            console.log('Updated Conversation:', updatedConversation);
-        } else {
-            // Conversation does not exist, create a new one
-            const createConversationResponse = await fetch('/api/conversation/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(conversationData)
-            });
-
-            const conversationResult = await createConversationResponse.json();
-            console.log('New Conversation Created:', conversationResult);
-        }
+        const conversationResult = await createConversationResponse.json();
+        console.log('New Conversation Created:', conversationResult);
+      }
     } catch (error) {
         console.error(error);
     }
 };
+
+const handleDeleteMessage = async () => {
+    try {
+        const res = await fetch(`/api/message/deletemessage/${messageToDelete}`, {
+            method: 'DELETE',
+        })
+        const data = await res.json();
+        if(res.ok){
+            setMessages((prev) => prev.filter((message) => message._id !== messageToDelete))
+            setShowModal(false)
+        } else {
+            console.log(data.message);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+  }
 
   return (
     <div className="flex h-screen relative">
@@ -163,9 +183,21 @@ useEffect(() => {
           .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)) // Sort messages by createdAt
           .map(message => (
             <div key={message._id} className={message.senderId === currentUser._id ? 'flex justify-end' : 'flex justify-start'}>
-              <p className={message.senderId === currentUser._id ? 'bg-blue-500 text-white p-2 rounded-lg m-2 text-right' : 'bg-gray-200 text-gray-700 p-2 rounded-lg m-2 text-left'}>
-              {message.content}
-              </p>
+              {message.isDeleted ? (
+                <p className='bg-red-500 p-2 rounded-lg m-2'>Message is deleted</p>
+              ) : (
+                <p 
+                  onClick={() => {
+                    if(currentUser.isAdmin || currentUser.username === message.senderId) {
+                      setShowModal(true);
+                      setMessageToDelete(message._id);
+                    }
+                  }}
+                  className={message.senderId === currentUser._id ? 'bg-blue-500 text-white p-2 rounded-lg m-2 text-right cursor-pointer' : 'bg-gray-200 text-gray-700 p-2 rounded-lg m-2 text-left cursor-pointer'}
+                >
+                  {message.content}
+                </p>
+              )}
             </div>
           ))}
                    
@@ -183,6 +215,21 @@ useEffect(() => {
           </svg>
         </button>
       </form>
+      <Modal show={showModal} onClose={() => setShowModal(false)} popup size='md'>
+        <Modal.Header/>
+        <Modal.Body>
+            <div className="text-center">
+                <HiOutlineExclamationCircle className='h-14 w-14 text-gray-400 dark:text-gray-200 mb-4 mx-auto'/>
+                <h3 className='mb-5 text-lg text-gray-500 dark:text-gray-400'>Are you sure you want to delete this user?</h3>
+                <div className="flex justify-center gap-4">
+                    <Button color='failure' onClick={handleDeleteMessage}>
+                        Yes, I am sure
+                    </Button>
+                    <Button color="gray" onClick={() => setShowModal(false)}>No, cancel</Button>
+                </div>
+            </div>
+        </Modal.Body>
+      </Modal>
     </div>
   )
 }

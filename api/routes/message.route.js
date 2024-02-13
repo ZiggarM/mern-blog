@@ -20,7 +20,7 @@ router.get(
   verifyToken,
   getMessagesBetweenUsers
 );
-router.delete("/deleteMessage/:messageId", verifyToken, deleteMessage);
+router.delete("/deletemessage/:messageId", verifyToken, deleteMessage);
 router.put("/editMessag/:messageId", verifyToken, editMessage);
 
 export default router;
