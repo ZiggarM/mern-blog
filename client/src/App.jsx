@@ -13,6 +13,7 @@ import UpdatePost from "./pages/UpdatePost"
 import Chat from "./pages/Chat"
 import PostPage from "./pages/PostPage"
 import ChatPage from "./pages/ChatPage"
+import EditUser from "./pages/EditUSer"
 
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
         <Route element={<OnlyAdminPrivateRoute />} >
           <Route path="/create-post" element={<Createpost />}/>
           <Route path="/update-post/:postId" element={<UpdatePost />}/>
+          <Route path="/update-user/:userId" element={<EditUser />}/>
         </Route>
         <Route path="/chat" element={<Chat />}/>
         <Route path="/chat/:userId" element={<ChatPage />}/>

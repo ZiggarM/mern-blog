@@ -7,7 +7,8 @@ export const test = (req, res) => {
 };
 
 export const updateUser = async (req, res, next) => {
-  if (req.user.id !== req.params.userId) {
+  console.log(req.user);
+  if (req.user.id !== req.params.userId && !req.user.isAdmin) {
     return next(errorHandler(403, "You are not allowed to update this user"));
   }
   if (req.body.password) {
@@ -117,5 +118,22 @@ export const getUsers = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const getUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const foundUser = await User.findById(userId);
+
+    if (!foundUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(foundUser);
+  } catch (error) {
+    // Handle any errors that may occur
+    console.error("Error fetching user:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

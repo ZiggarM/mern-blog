@@ -221,7 +221,7 @@ const handleEditMessage = async () => {
               ) : (
                 <p 
                   onClick={() => {
-                    if(currentUser.isAdmin || currentUser.username === message.senderId) {
+                    if(currentUser.isAdmin || currentUser._id === message.senderId) {
                       setShowModal(true);
                       setMessageToDelete(message._id);
                       setMessageToEdit(message.content);
@@ -239,7 +239,7 @@ const handleEditMessage = async () => {
                    
         </div>
       </div>
-      <form className="flex gap-2 mt-4 chat-form" onSubmit={sendMessage}>
+      <form className="flex gap-2 mt-4 chat-form text-black" onSubmit={sendMessage}>
         <input type="text" 
         value={newMessageText}
         onChange={e => setNewMessageText(e.target.value)}
@@ -269,7 +269,7 @@ const handleEditMessage = async () => {
                 <p className='mb-4'>No updates have been made.</p>
               )}
                 <h3 className="text-lg font-bold mb-3">Update your Message</h3>
-                <Textarea className='mb-4' defaultValue={messageToEdit} onChange={handleTextareaChange}></Textarea>
+                <Textarea rows="5" className='mb-4' defaultValue={messageToEdit} onChange={handleTextareaChange}></Textarea>
                 <div className="flex justify-center gap-4">
                     <Button color='failure' onClick={handleDeleteMessage}>
                         Delete Message
