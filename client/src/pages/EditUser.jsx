@@ -8,6 +8,7 @@ import 'react-circular-progressbar/dist/styles.css';
 import { updateStart, updateSuccess, updateFailure, deleteUserStart, deleteUserSuccess, deleteUserFailure, signoutSuccess } from '../redux/user/userSlice'
 import { useDispatch } from 'react-redux'
 import {HiOutlineExclamationCircle} from 'react-icons/hi'
+import { useNavigate } from 'react-router-dom'
 
 
 
@@ -26,6 +27,7 @@ export default function EditUser() {
 
     const filePickerRef = useRef()
     const dispatch = useDispatch()
+    const navigate = useNavigate()
 
     const url = new URL(window.location.href);
     const userId = url.pathname.split("/").pop(); // Get the last segment of the URL path
@@ -156,7 +158,8 @@ export default function EditUser() {
             if(!res.ok) {
                 dispatch(deleteUserFailure(data.message))
             } else {
-                dispatch(deleteUserSuccess(data))
+                // dispatch(deleteUserSuccess(data))
+                navigate("/")
             }
         } catch (error) {
             dispatch(deleteUserFailure(error.message))
