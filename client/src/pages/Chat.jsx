@@ -124,7 +124,7 @@ useEffect(() => {
   }, [usersMessages]);
 
 
-  const sendMessage = async (e) => {
+   const sendMessage = async (e) => {
     e.preventDefault();
     
     try {

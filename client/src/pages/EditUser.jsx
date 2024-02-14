@@ -196,7 +196,7 @@ export default function EditUser() {
         <TextInput type='email' id='email' placeholder='email' defaultValue={foundUser.email} disabled/>
         <TextInput type='password' id='password' placeholder='password' onChange={handleChange} />
         <Button type='submit' gradientDuoTone="purpleToBlue" outline >
-            {loading ? 'Loading...' : 'Update'}
+            Update
         </Button>
       </form>
       <div className="text-red-500 text-center mt-5">
