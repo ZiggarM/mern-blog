@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import {useSelector} from 'react-redux'
-import { Button, Modal } from 'flowbite-react';
+import { Button, FooterDivider, Modal, Textarea } from 'flowbite-react';
 import { HiOutlineExclamationCircle } from 'react-icons/hi'
 
 
@@ -12,6 +12,9 @@ export default function ChatPage() {
   const [newMessageText ,setNewMessageText] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [messageToDelete, setMessageToDelete] = useState('')
+  const [messageToEdit,setMessageToEdit] = useState('')
+  const [messageUpdateHistory, setMessageUpdateHistory] = useState([])
+  const [updatedMessage, setUpdatedMessage] = useState('')
   const [messages, setMessages] = useState([])
   const chatAreaRef = useRef(null); // Ref for the chat area element
 
@@ -28,7 +31,6 @@ export default function ChatPage() {
     }
     }, [usersMessages]);
  
-    console.log(messageToDelete);
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -46,8 +48,9 @@ export default function ChatPage() {
         console.log(error.message);
       }
     }
+    console.log('refresh');
     fetchUsers();
-  }, [newMessageText]);
+  }, [newMessageText,messages]);
 
   useEffect(() => {
     const fetchConversations = async () => {
@@ -158,7 +161,37 @@ const handleDeleteMessage = async () => {
         console.log(error);
     }
   }
+  
+const handleEditMessage = async () => {
+    try {
+        const res = await fetch(`/api/message/editMessage/${messageToDelete}`, {
+         method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({content: updatedMessage})
+        });
+        const data = await res.json();
+        if(res.ok){
+            setMessages((prev) => prev.filter((message) => message._id !== messageToDelete))
+            setShowModal(false)
+        } else {
+            console.log(data.message);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+  }
 
+   const handleTextareaChange = (event) => {
+    setUpdatedMessage(event.target.value);
+  };
+  const formatEditedAt = (editedAt) => {
+    // Convert the editedAt timestamp to a Date object
+    const date = new Date(editedAt);
+    // Format the date in a more human-readable format
+    return date.toLocaleString(); // You can adjust the locale and options as needed
+  };
   return (
     <div className="flex h-screen relative">
       <div className="bg-gray-500 w-1/5 sidebar">
@@ -191,6 +224,9 @@ const handleDeleteMessage = async () => {
                     if(currentUser.isAdmin || currentUser.username === message.senderId) {
                       setShowModal(true);
                       setMessageToDelete(message._id);
+                      setMessageToEdit(message.content);
+                      setMessageUpdateHistory(message.editHistory);
+                      setUpdatedMessage(message.content)
                     }
                   }}
                   className={message.senderId === currentUser._id ? 'bg-blue-500 text-white p-2 rounded-lg m-2 text-right cursor-pointer' : 'bg-gray-200 text-gray-700 p-2 rounded-lg m-2 text-left cursor-pointer'}
@@ -215,17 +251,33 @@ const handleDeleteMessage = async () => {
           </svg>
         </button>
       </form>
-      <Modal show={showModal} onClose={() => setShowModal(false)} popup size='md'>
+      <Modal show={showModal} onClose={() => setShowModal(false)} popupsize='lg'>
         <Modal.Header/>
         <Modal.Body>
             <div className="text-center">
-                <HiOutlineExclamationCircle className='h-14 w-14 text-gray-400 dark:text-gray-200 mb-4 mx-auto'/>
-                <h3 className='mb-5 text-lg text-gray-500 dark:text-gray-400'>Are you sure you want to delete this user?</h3>
+              <HiOutlineExclamationCircle className='h-14 w-14 text-gray-400 dark:text-gray-200 mb-4 mx-auto'/>
+              <h2 className="text-lg font-bold">Message Update History</h2>
+              {messageUpdateHistory.length > 0 ? (
+                messageUpdateHistory.map((history, index) => (
+                  <div key={index} className='mb-4'>
+                    <p>{history.content}</p>
+                    <p>Edited at: {formatEditedAt(history.editedAt)}</p>
+                    <FooterDivider/>
+                  </div>
+                ))
+              ) : (
+                <p className='mb-4'>No updates have been made.</p>
+              )}
+                <h3 className="text-lg font-bold mb-3">Update your Message</h3>
+                <Textarea className='mb-4' defaultValue={messageToEdit} onChange={handleTextareaChange}></Textarea>
                 <div className="flex justify-center gap-4">
                     <Button color='failure' onClick={handleDeleteMessage}>
-                        Yes, I am sure
+                        Delete Message
                     </Button>
-                    <Button color="gray" onClick={() => setShowModal(false)}>No, cancel</Button>
+                    <Button color='success' onClick={handleEditMessage}>
+                        Edit Message
+                    </Button>
+                    {/* <Button color="gray" onClick={() => setShowModal(false)}>No, cancel</Button> */}
                 </div>
             </div>
         </Modal.Body>

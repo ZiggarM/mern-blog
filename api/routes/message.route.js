@@ -21,6 +21,6 @@ router.get(
   getMessagesBetweenUsers
 );
 router.delete("/deletemessage/:messageId", verifyToken, deleteMessage);
-router.put("/editMessag/:messageId", verifyToken, editMessage);
+router.put("/editmessage/:messageId", verifyToken, editMessage);
 
 export default router;

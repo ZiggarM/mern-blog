@@ -41,7 +41,7 @@ export default function DashProfile() {
     }, [imageFile])
 
     const uploadImage = async () => {
-  
+//   Firebase code
         // service firebase.storage {
         // match /b/{bucket}/o {
         // match /{allPaths=**} {
